@@ -271,7 +271,7 @@ class AxialDecLWDiscriminator(nn.Module):
                 dim=max(N, opt.min_nfc),  # embedding dimension
                 dim_index=3,  # where is the embedding dimension
                 # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
-                heads=4,  # number of heads for multi-head attention
+                heads=32,  # number of heads for multi-head attention
                 num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
                 sum_axial_out=True)
         self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
@@ -302,7 +302,7 @@ class AxialDecLGeneratorConcatSkip2CleanAdd(nn.Module):
                 dim=max(N, opt.min_nfc),  # embedding dimension
                 dim_index=3,  # where is the embedding dimension
                 # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
-                heads=4,  # number of heads for multi-head attention
+                heads=32,  # number of heads for multi-head attention
                 num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
                 sum_axial_out=True)
         self.tail = nn.Sequential(
