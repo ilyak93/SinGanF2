@@ -576,7 +576,7 @@ class PerformerWDiscriminator(nn.Module):
             block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
             self.body.add_module('block%d' % (i + 1), block)
         if opt.attn == True:
-            self.attn = SelfAttention(
+            self.attn = Performer(
                     dim = max(N, opt.min_nfc),
                     heads = 4,
                     causal = False,
@@ -607,7 +607,7 @@ class PerformerGeneratorConcatSkip2CleanAdd(nn.Module):
             block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
             self.body.add_module('block%d' % (i + 1), block)
         if opt.attn == True:
-            self.attn = SelfAttention(
+            self.attn = Performer(
                     dim = max(N, opt.min_nfc),
                     heads = 4,
                     causal = False,
