@@ -560,10 +560,10 @@ class PerformerSAGeneratorConcatSkip2CleanAdd(nn.Module):
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
         return x + y
-		
-		
-		
-		
+        
+        
+        
+        
 class PerformerWDiscriminator(nn.Module):
     def __init__(self, opt):
         super(PerformerWDiscriminator, self).__init__()
@@ -580,7 +580,7 @@ class PerformerWDiscriminator(nn.Module):
                     dim = max(N, opt.min_nfc),
                     heads = 4,
                     causal = False,
-					depth=1
+                    depth=1
                     )
             self.gamma = nn.Parameter(torch.zeros(1))
         self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
@@ -611,7 +611,7 @@ class PerformerGeneratorConcatSkip2CleanAdd(nn.Module):
                     dim = max(N, opt.min_nfc),
                     heads = 4,
                     causal = False,
-					depth=1
+                    depth=1
                     )
             self.gamma = nn.Parameter(torch.zeros(1))
         self.tail = nn.Sequential(
