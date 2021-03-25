@@ -578,11 +578,11 @@ class PerformerWDiscriminator(nn.Module):
         if opt.attn == True:
             self.attn = Performer(
                     dim = max(N, opt.min_nfc),
+                    dim_head = max(N, opt.min_nfc),
                     heads = 4,
                     causal = False,
                     depth=1
                     )
-            self.gamma = nn.Parameter(torch.zeros(1))
         self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
 
     def forward(self, x):
@@ -613,11 +613,11 @@ class PerformerGeneratorConcatSkip2CleanAdd(nn.Module):
         if opt.attn == True:
             self.attn = Performer(
                     dim = max(N, opt.min_nfc),
+                    dim_head = max(N, opt.min_nfc),
                     heads = 4,
                     causal = False,
                     depth=1
                     )
-            self.gamma = nn.Parameter(torch.zeros(1))
         self.tail = nn.Sequential(
             nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
             nn.Tanh()
