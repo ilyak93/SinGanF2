@@ -589,7 +589,11 @@ class PerformerWDiscriminator(nn.Module):
         x = self.head(x)
         x = self.body(x)
         if hasattr(self, 'attn'):
-            x = self.attn(x)
+            x_hat = x.permute([0, 2, 3, 1]).contiguous()
+            x_hat = x_hat.view(x_hat.shape[0], -1, x_hat.shape[3])
+            x_hat = self.attn(x_hat)
+            x_hat = x_hat.view(x.shape[0], x.shape[2], x.shape[3], x.shape[1])
+            x = x_hat.permute([0, 3, 1, 2]).contiguous()
         x = self.tail(x)
         return x
 
@@ -623,7 +627,11 @@ class PerformerGeneratorConcatSkip2CleanAdd(nn.Module):
         x = self.head(x)
         x = self.body(x)
         if hasattr(self, 'attn'):
-            x = self.attn(x)
+            x_hat = x.permute([0, 2, 3, 1]).contiguous()
+            x_hat = x_hat.view(x_hat.shape[0], -1, x_hat.shape[3])
+            x_hat = self.attn(x_hat)
+            x_hat = x_hat.view(x.shape[0], x.shape[2], x.shape[3], x.shape[1])
+            x = x_hat.permute([0, 3, 1, 2]).contiguous()
         x = self.tail(x)
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
