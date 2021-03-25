@@ -566,7 +566,7 @@ class PerformerSAGeneratorConcatSkip2CleanAdd(nn.Module):
 		
 class PerformerWDiscriminator(nn.Module):
     def __init__(self, opt):
-        super(AxialWDiscriminator, self).__init__()
+        super(PerformerWDiscriminator, self).__init__()
         self.is_cuda = torch.cuda.is_available()
         N = int(opt.nfc)
         self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size, 1)
@@ -579,7 +579,8 @@ class PerformerWDiscriminator(nn.Module):
             self.attn = SelfAttention(
                     dim = max(N, opt.min_nfc),
                     heads = 4,
-                    causal = False
+                    causal = False,
+					depth=1
                     )
             self.gamma = nn.Parameter(torch.zeros(1))
         self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
@@ -588,14 +589,14 @@ class PerformerWDiscriminator(nn.Module):
         x = self.head(x)
         x = self.body(x)
         if hasattr(self, 'attn'):
-            x = self.gamma * self.attn(x) + x
+            x = self.attn(x)
         x = self.tail(x)
         return x
 
 
 class PerformerGeneratorConcatSkip2CleanAdd(nn.Module):
     def __init__(self, opt):
-        super(AxialGeneratorConcatSkip2CleanAdd, self).__init__()
+        super(PerformerGeneratorConcatSkip2CleanAdd, self).__init__()
         self.is_cuda = torch.cuda.is_available()
         N = opt.nfc
         self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size,
@@ -609,7 +610,8 @@ class PerformerGeneratorConcatSkip2CleanAdd(nn.Module):
             self.attn = SelfAttention(
                     dim = max(N, opt.min_nfc),
                     heads = 4,
-                    causal = False
+                    causal = False,
+					depth=1
                     )
             self.gamma = nn.Parameter(torch.zeros(1))
         self.tail = nn.Sequential(
@@ -621,7 +623,7 @@ class PerformerGeneratorConcatSkip2CleanAdd(nn.Module):
         x = self.head(x)
         x = self.body(x)
         if hasattr(self, 'attn'):
-            x = self.gamma * self.attn(x) + x
+            x = self.attn(x)
         x = self.tail(x)
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
