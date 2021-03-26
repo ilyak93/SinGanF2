@@ -772,7 +772,7 @@ class ViT(nn.Module):
         #x += self.pos_embedding[:, :n]
         x = self.dropout(x)
 
-        #x = self.transformer(x)
+        x = self.transformer(x)
 
         return self.from_patch_embedding(x)[:,:,:shape[2], :shape[3]]
 
