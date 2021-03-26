@@ -743,7 +743,7 @@ class ViT(nn.Module):
 
         self.to_patch_embedding = nn.Sequential(
             Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1 = patch_size[0], p2 = patch_size[1]),
-            nn.Linear(patch_dim, embed_dim),
+            #nn.Linear(patch_dim, embed_dim),
         )
 
         self.pos_embedding = nn.Parameter(torch.randn(1, num_patches, embed_dim))
@@ -758,7 +758,7 @@ class ViT(nn.Module):
         w = img_size[1] // patch_size[1]
         patch_dim = (patch_dim // channels) * output_dim
         self.from_patch_embedding = nn.Sequential(
-            nn.Linear(embed_dim, patch_dim),
+            #nn.Linear(embed_dim, patch_dim),
             Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', h=h, w=w, p1=patch_size[0], p2=patch_size[1], c=output_dim)
         )
 
