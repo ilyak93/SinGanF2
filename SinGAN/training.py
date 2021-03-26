@@ -31,7 +31,12 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
         #plt.imsave('%s/original.png' %  (opt.out_), functions.convert_image_np(real_), vmin=0, vmax=1)
         plt.imsave('%s/real_scale.png' %  (opt.outf), functions.convert_image_np(reals[scale_num]), vmin=0, vmax=1)
         
-        opt.cur_real_h_w = reals[len(Gs)].shape[2], reals[len(Gs)].shape[3]
+        _, _, rh, rw = reals[scale_num].shape
+        opt.real_image_size = rh, rw
+        _,_,fh,fw =reals[scale_num].shape
+        fh, fw = fh+10,fw+10
+        opt.fake_image_size = fh, fw
+        
         D_curr,G_curr = init_models(opt)
         if (nfc_prev==opt.nfc):
             G_prev = torch.load('%s/%d/netG.pth' % (opt.out_, scale_num - 1))
