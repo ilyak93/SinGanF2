@@ -789,7 +789,7 @@ class ViTWDiscriminator(nn.Module):
             self.body.add_module('block%d' % (i + 1), block)
         if opt.attn == True:
             h, w = opt.cur_real_h_w[0], opt.cur_real_h_w[1]
-            self.attn = ViT(image_size=[h, w], channels=1, output_dim=1)
+            self.attn = ViT(image_size=[h, w], embed_dim=16, channels=1, output_dim=1)
         self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
 
     def forward(self, x):
