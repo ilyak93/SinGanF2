@@ -613,7 +613,7 @@ class PerformerGeneratorConcatSkip2CleanAdd(nn.Module):
         if opt.attn == True:
             self.attn = Performer(
                     dim = max(N, opt.min_nfc),
-                    dim_head = max(N, opt.min_nfc),
+                    dim_head = max(N, opt.min_nfc) // 4,
                     heads = 4,
                     causal = False,
                     depth=1
