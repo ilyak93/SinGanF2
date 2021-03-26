@@ -767,7 +767,7 @@ class ViT(nn.Module):
         shape = img.shape
         img = self.pad_input(img)
         x = self.to_patch_embedding(img)
-        b, n, _ = x.shape
+        #b, n, _ = x.shape
 
         #x += self.pos_embedding[:, :n]
         x = self.dropout(x)
