@@ -758,7 +758,7 @@ class ViT(nn.Module):
         w = img_size[1] // patch_size[1]
         patch_dim = (patch_dim // channels) * output_dim
         self.from_patch_embedding = nn.Sequential(
-            nn.Linear(embed_dim, patch_dim),
+            #nn.Linear(embed_dim, patch_dim),
             Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', h=h, w=w, p1=patch_size[0], p2=patch_size[1], c=output_dim)
         )
 
@@ -790,7 +790,7 @@ class ViTWDiscriminator(nn.Module):
         if opt.attn == True:
             h, w = opt.cur_real_h_w[0], opt.cur_real_h_w[1]
             self.attn = ViT(image_size=[h, w], output_dim=1)
-        self.tail = nn.Conv2d(max(N, opt.min_nfc), 3, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
+        self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
 
     def forward(self, x):
         x = self.head(x)
