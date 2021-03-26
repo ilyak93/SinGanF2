@@ -750,7 +750,7 @@ class ViT(nn.Module):
 
         self.dropout = nn.Dropout(emb_dropout)
         dim_head = embed_dim // heads
-        #self.transformer = Transformer(embed_dim, depth, num_patches, dim_head, mlp_dim, dropout)
+        self.transformer = Transformer(embed_dim, depth, num_patches, dim_head, mlp_dim, dropout)
 
         self.to_latent = nn.Identity()
 
