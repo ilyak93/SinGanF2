@@ -742,7 +742,7 @@ class ViT(nn.Module):
 
 
         self.to_patch_embedding = nn.Sequential(
-            Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1 = patch_size[0], p2 = patch_size[1]),
+            #Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1 = patch_size[0], p2 = patch_size[1]),
             #nn.Linear(patch_dim, embed_dim),
         )
 
@@ -759,7 +759,7 @@ class ViT(nn.Module):
         patch_dim = (patch_dim // channels) * output_dim
         self.from_patch_embedding = nn.Sequential(
             #nn.Linear(embed_dim, patch_dim),
-            Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', h=h, w=w, p1=patch_size[0], p2=patch_size[1], c=output_dim)
+            #Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', h=h, w=w, p1=patch_size[0], p2=patch_size[1], c=output_dim)
         )
 
 
@@ -769,7 +769,7 @@ class ViT(nn.Module):
         x = self.to_patch_embedding(img)
         b, n, _ = x.shape
 
-        x += self.pos_embedding[:, :n]
+        #x += self.pos_embedding[:, :n]
         x = self.dropout(x)
 
         #x = self.transformer(x)
