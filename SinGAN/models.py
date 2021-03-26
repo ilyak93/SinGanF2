@@ -774,3 +774,61 @@ class ViT(nn.Module):
         x = self.transformer(x)
 
         return self.from_patch_embedding(x)[:,:,:shape[2], :shape[3]]
+
+        
+        
+
+class ViTWDiscriminator(nn.Module):
+    def __init__(self, opt):
+        super(ViTWDiscriminator, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = int(opt.nfc)
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size, 1)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+        if opt.attn == True:
+            h, w = opt.cur_real_h_w[0], opt.cur_real_h_w[1]
+            self.attn = ViT(image_size=[h, w], output_dim=1)
+        self.tail = nn.Conv2d(max(N, opt.min_nfc), 3, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
+
+    def forward(self, x):
+        x = self.head(x)
+        x = self.body(x)
+        x = self.tail(x)
+        if hasattr(self, 'attn'):
+            x = self.attn(x)
+        return x
+
+
+class ViTGeneratorConcatSkip2CleanAdd(nn.Module):
+    def __init__(self, opt):
+        super(ViTGeneratorConcatSkip2CleanAdd, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = opt.nfc
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size,
+                              1)  # GenConvTransBlock(opt.nc_z,N,opt.ker_size,opt.padd_size,opt.stride)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+        if opt.attn == True:
+            h, w = opt.cur_real_h_w[0], opt.cur_real_h_w[1]
+            self.attn = ViT(image_size=[h,w])
+        self.tail = nn.Sequential(
+            nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
+            nn.Tanh()
+        )
+
+    def forward(self, x, y):
+        x = self.head(x)
+        x = self.body(x)
+        x = self.tail(x)
+        if hasattr(self, 'attn'):
+            x = self.attn(x)
+        ind = int((y.shape[2] - x.shape[2]) / 2)
+        y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
+        return x + y
