@@ -716,6 +716,7 @@ class Transformer(nn.Module):
     def __init__(self, dim, depth, heads, dim_head, mlp_dim, dropout = 0.):
         super().__init__()
         self.layers = nn.ModuleList([])
+		self.gamma = nn.Parameter(torch.zeros(1))
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
                 Residual(PreNorm(dim, Attention(dim, heads = heads, dim_head = dim_head, dropout = dropout))),
@@ -723,8 +724,8 @@ class Transformer(nn.Module):
             ]))
     def forward(self, x):
         for attn, ff in self.layers:
-            x = attn(x)
-            x = ff(x)
+            x = x+self.gamma*attn(x)
+            #x = ff(x)
         return x
 
 class ViT(nn.Module):
