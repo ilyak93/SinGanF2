@@ -484,7 +484,7 @@ class ImgTransfromerGeneratorConcatSkip2CleanAdd(nn.Module):
         
         
 
-        
+'''        
 from performer_pytorch import SelfAttention, Performer
 
 
@@ -636,7 +636,7 @@ class PerformerGeneratorConcatSkip2CleanAdd(nn.Module):
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
         return x + y
-
+'''
 
         
         
