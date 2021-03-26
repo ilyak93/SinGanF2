@@ -151,10 +151,10 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
                     prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
                     prev = m_image(prev)
                     z_prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rec',m_noise,m_image,opt)
-                    z_prev = m_image(z_prev)
                     criterion = nn.MSELoss()
                     RMSE = torch.sqrt(criterion(real, z_prev))
                     opt.noise_amp = opt.noise_amp_init*RMSE
+					z_prev = m_image(z_prev)
             else:
                 prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
                 prev = m_image(prev)
@@ -169,7 +169,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
                 noise = opt.noise_amp*noise_+prev
 
             fake = netG(noise.detach(),prev)
-            fake = m_image(fake)
+         
             output = netD(fake.detach())
             errD_fake = output.mean()
             errD_fake.backward(retain_graph=True)
@@ -201,7 +201,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
                     plt.imsave('%s/z_prev.png' % (opt.outf), functions.convert_image_np(z_prev), vmin=0, vmax=1)
                 Z_opt = opt.noise_amp*z_opt+z_prev
                 fake = netG(Z_opt.detach(), z_prev)
-                fake = m_image(fake)
+                
                 rec_loss = alpha*loss(fake, real)
                 rec_loss.backward(retain_graph=True)
                 rec_loss = rec_loss.detach()
@@ -211,7 +211,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
 
             optimizerG.step()
             fake = netG(noise.detach(), prev)
-            fake = m_image(fake)
+            
 
         errG2plot.append(errG.detach()+rec_loss)
         errG2recplot.append(rec_loss.detach())
