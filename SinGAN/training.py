@@ -156,6 +156,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
                 noise = opt.noise_amp*noise_+prev
 
             fake = netG(noise.detach(),prev)
+            fake = m_image(fake)
             output = netD(fake.detach())
             errD_fake = output.mean()
             errD_fake.backward(retain_graph=True)
@@ -186,7 +187,9 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
                     z_prev = functions.quant2centers(z_prev, centers)
                     plt.imsave('%s/z_prev.png' % (opt.outf), functions.convert_image_np(z_prev), vmin=0, vmax=1)
                 Z_opt = opt.noise_amp*z_opt+z_prev
-                rec_loss = alpha*loss(netG(Z_opt.detach(),z_prev),real)
+                fake = netG(Z_opt.detach(), z_prev)
+                fake = m_image(fake)
+                rec_loss = alpha*loss(fake, real)
                 rec_loss.backward(retain_graph=True)
                 rec_loss = rec_loss.detach()
             else:
@@ -195,6 +198,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
 
             optimizerG.step()
             fake = netG(noise.detach(), prev)
+            fake = m_image(fake)
 
         errG2plot.append(errG.detach()+rec_loss)
         errG2recplot.append(rec_loss.detach())
