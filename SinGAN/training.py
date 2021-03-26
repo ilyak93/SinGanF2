@@ -87,7 +87,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
         pad_noise = 0
     m_noise = nn.ZeroPad2d(int(pad_noise))
     m_image = nn.ZeroPad2d(int(pad_image))
-    real = m_image(real)
+    #real = m_image(real)
     
     alpha = opt.alpha
 
