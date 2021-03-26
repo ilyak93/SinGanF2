@@ -34,8 +34,16 @@ def train(opt,Gs,Zs,reals,NoiseAmp):
         opt.cur_real_h_w = reals[len(Gs)].shape[2], reals[len(Gs)].shape[3]
         D_curr,G_curr = init_models(opt)
         if (nfc_prev==opt.nfc):
-            G_curr.load_state_dict(torch.load('%s/%d/netG.pth' % (opt.out_,scale_num-1)))
-            D_curr.load_state_dict(torch.load('%s/%d/netD.pth' % (opt.out_,scale_num-1)))
+            G_prev = torch.load('%s/%d/netG.pth' % (opt.out_, scale_num - 1))
+            G_curr_params = G_curr.state_dict()
+            filtered_G_prev = {k: v for k, v in G_prev.items() if k in G_curr_params and v.shape == G_curr_params[k].shape}
+            G_curr_params.update(filtered_G_prev)
+            G_curr.load_state_dict(G_curr_params)
+            D_prev = torch.load('%s/%d/netD.pth' % (opt.out_, scale_num - 1))
+            D_curr_params = D_curr.state_dict()
+            filtered_D_prev = {k: v for k, v in D_prev.items() if k in D_curr_params and v.shape == D_curr_params[k].shape}
+            D_curr_params.update(filtered_D_prev)
+            D_curr.load_state_dict(D_curr_params)
 
         z_curr,in_s,G_curr = train_single_scale(D_curr,G_curr,reals,Gs,Zs,in_s,NoiseAmp,opt)
 
