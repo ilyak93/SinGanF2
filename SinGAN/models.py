@@ -684,22 +684,21 @@ class FeedForward(nn.Module):
 class Attention(nn.Module):
     def __init__(self, dim, heads = 8, dim_head = 64, dropout = 0.):
         super().__init__()
-        inner_dim = dim
+        inner_dim = dim_head * heads
         project_out = not (heads == 1 and dim_head == dim)
 
         self.heads = heads
         self.scale = dim_head ** -0.5
 
-        self.to_qkv = nn.Linear(heads, 3*heads, bias = False)
+        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
 
         self.to_out = nn.Sequential(
-            #nn.Linear(inner_dim, dim),
+            nn.Linear(inner_dim, dim),
             nn.Dropout(dropout)
         ) if project_out else nn.Identity()
 
     def forward(self, x):
-        x = x.transpose(1,2)
-        b, n, _, h = *x.shape, x.shape[2]
+        b, n, _, h = *x.shape, self.heads
         qkv = self.to_qkv(x).chunk(3, dim = -1)
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = h), qkv)
 
@@ -708,7 +707,7 @@ class Attention(nn.Module):
         attn = dots.softmax(dim=-1)
 
         out = einsum('b h i j, b h j d -> b h i d', attn, v)
-        out = rearrange(out, 'b h n d -> b n (h d)').transpose(1,2)
+        out = rearrange(out, 'b h n d -> b n (h d)')
         out =  self.to_out(out)
         return out
 
@@ -716,7 +715,6 @@ class Transformer(nn.Module):
     def __init__(self, dim, depth, heads, dim_head, mlp_dim, dropout = 0.):
         super().__init__()
         self.layers = nn.ModuleList([])
-        self.gamma = nn.Parameter(torch.zeros(1))
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
                 Residual(PreNorm(dim, Attention(dim, heads = heads, dim_head = dim_head, dropout = dropout))),
@@ -724,8 +722,8 @@ class Transformer(nn.Module):
             ]))
     def forward(self, x):
         for attn, ff in self.layers:
-            x = x+self.gamma*attn(x)
-            #x = ff(x)
+            x = attn(x)
+            x = ff(x)
         return x
 
 class ViT(nn.Module):
@@ -747,11 +745,11 @@ class ViT(nn.Module):
             #nn.Linear(patch_dim, embed_dim),
         )
 
-        self.pos_embedding = nn.Parameter(torch.randn(1, num_patches, embed_dim))
+        #self.pos_embedding = nn.Parameter(torch.randn(1, num_patches, embed_dim))
 
         self.dropout = nn.Dropout(emb_dropout)
         dim_head = embed_dim // heads
-        self.transformer = Transformer(embed_dim, depth, num_patches, dim_head, mlp_dim, dropout)
+        self.transformer = Transformer(embed_dim, depth, heads, dim_head, mlp_dim, dropout)
 
         self.to_latent = nn.Identity()
 
@@ -759,7 +757,7 @@ class ViT(nn.Module):
         w = img_size[1] // patch_size[1]
         patch_dim = (patch_dim // channels) * output_dim
         self.from_patch_embedding = nn.Sequential(
-            #nn.Linear(embed_dim, patch_dim),
+            nn.Linear(embed_dim, patch_dim),
             Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', h=h, w=w, p1=patch_size[0], p2=patch_size[1], c=output_dim)
         )
 
@@ -768,12 +766,15 @@ class ViT(nn.Module):
         shape = img.shape
         img = self.pad_input(img)
         x = self.to_patch_embedding(img)
-        #b, n, _ = x.shape
+        x = x.transpose(0,1)
+        b, n, _ = x.shape
 
         #x += self.pos_embedding[:, :n]
         x = self.dropout(x)
 
         x = self.transformer(x)
+
+        x = x.transpose(0,1)
 
         return self.from_patch_embedding(x)[:,:,:shape[2], :shape[3]]
 
@@ -790,8 +791,8 @@ class ViTWDiscriminator(nn.Module):
             self.body.add_module('block%d' % (i + 1), block)
         if opt.attn == True:
             h, w = opt.cur_real_h_w[0], opt.cur_real_h_w[1]
-            self.attn = ViT(image_size=[h, w], embed_dim=16, channels=1, output_dim=1)
-        self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
+            self.attn = ViT(image_size=[h, w], output_dim=1)
+        self.tail = nn.Conv2d(max(N, opt.min_nfc), 3, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
 
     def forward(self, x):
         x = self.head(x)
