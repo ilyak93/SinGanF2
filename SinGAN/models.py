@@ -233,6 +233,21 @@ class AxialGeneratorConcatSkip2CleanAdd(nn.Module):
         
         
 
+
+def calculate_permutations(num_dimensions, emb_dim):
+    total_dimensions = num_dimensions + 2
+    emb_dim = emb_dim if emb_dim > 0 else (emb_dim + total_dimensions)
+    axial_dims = [ind for ind in range(1, total_dimensions) if ind != emb_dim]
+
+    permutations = []
+
+    for axial_dim in axial_dims:
+        last_two_dims = [axial_dim, emb_dim]
+        dims_rest = set(range(0, total_dimensions)) - set(last_two_dims)
+        permutation = [*dims_rest, *last_two_dims]
+        permutations.append(permutation)
+      
+    return permutations
         
 
 class MySelfAttention(nn.Module):
