@@ -233,6 +233,138 @@ class AxialGeneratorConcatSkip2CleanAdd(nn.Module):
         
         
 
+        
+
+class MySelfAttention(nn.Module):
+    def __init__(self, dim, heads, dim_heads = None):
+        super().__init__()
+        self.dim_heads = (dim // heads) if dim_heads is None else dim_heads
+        dim_hidden = self.dim_heads * heads
+
+        self.heads = heads
+        self.to_q = nn.Linear(dim, dim_hidden, bias = False)
+        self.to_kv = nn.Linear(dim, 2 * dim_hidden, bias = False)
+        self.to_out = nn.Linear(dim_hidden, dim)
+
+    def forward(self, x, kv = None):
+        kv = x if kv is None else kv
+        q, k, v = (self.to_q(x), *self.to_kv(kv).chunk(2, dim=-1))
+
+        b, t, d, h, e = *q.shape, self.heads, self.dim_heads
+
+        merge_heads = lambda x: x.reshape(b, -1, h, e).transpose(1, 2).reshape(b * h, -1, e)
+        q, k, v = map(merge_heads, (q, k, v))
+
+        dots = torch.einsum('bie,bje->bij', q, k) * (e ** -0.5)
+        dots = dots.softmax(dim=-1)
+        out = torch.einsum('bij,bje->bie', dots, v)
+
+        out = out.reshape(b, h, -1, e).transpose(1, 2).reshape(b, -1, d)
+        
+        return out
+
+# axial attention class
+from axial_attention.axial_attention import PermuteToFrom
+
+class MyAxialAttention(nn.Module):
+    def __init__(self, dim, num_dimensions = 2, heads = 8, dim_heads = None, dim_index = -1, sum_axial_out = True):
+        assert (dim % heads) == 0, 'hidden dimension must be divisible by number of heads'
+        super().__init__()
+        self.dim = dim
+        self.total_dimensions = num_dimensions + 2
+        self.dim_index = dim_index if dim_index > 0 else (dim_index + self.total_dimensions)
+
+        attentions = []
+        for permutation in calculate_permutations(num_dimensions, dim_index):
+            attentions.append(PermuteToFrom(permutation, MySelfAttention(dim, heads, dim_heads)))
+
+        self.axial_attentions = nn.ModuleList(attentions)
+        self.sum_axial_out = sum_axial_out
+
+    def forward(self, x):
+        assert len(x.shape) == self.total_dimensions, 'input tensor does not have the correct number of dimensions'
+        assert x.shape[self.dim_index] == self.dim, 'input tensor does not have the correct input dimension'
+
+        if self.sum_axial_out:
+            return sum(map(lambda axial_attn: axial_attn(x), self.axial_attentions))
+
+        out = x
+        for axial_attn in self.axial_attentions:
+            out = axial_attn(out)
+        return out
+        
+        
+class MyAxialWDiscriminator(nn.Module):
+    def __init__(self, opt):
+        super(AxialWDiscriminator, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = int(opt.nfc)
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size, 1)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+        if opt.attn == True:
+            self.attn = MyAxialAttention(
+                dim=max(N, opt.min_nfc),  # embedding dimension
+                dim_index=1,  # where is the embedding dimension
+                # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
+                heads=4,  # number of heads for multi-head attention
+                num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
+                sum_axial_out=True
+                # whether to sum the contributions of attention on each axis, or to run the input through them sequentially. defaults to true
+            )
+            self.gamma = nn.Parameter(torch.zeros(1))
+        self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
+
+    def forward(self, x):
+        x = self.head(x)
+        x = self.body(x)
+        if hasattr(self, 'attn'):
+            x = self.gamma * self.attn(x) + x
+        x = self.tail(x)
+        return x
+
+
+class MyAxialGeneratorConcatSkip2CleanAdd(nn.Module):
+    def __init__(self, opt):
+        super(AxialGeneratorConcatSkip2CleanAdd, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = opt.nfc
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size,
+                              1)  # GenConvTransBlock(opt.nc_z,N,opt.ker_size,opt.padd_size,opt.stride)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+        if opt.attn == True:
+            self.attn = self.attn = MyAxialAttention(
+                dim=max(N, opt.min_nfc),  # embedding dimension
+                dim_index=1,  # where is the embedding dimension
+                # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
+                heads=4,  # number of heads for multi-head attention
+                num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
+                sum_axial_out=True
+                # whether to sum the contributions of attention on each axis, or to run the input through them sequentially. defaults to true
+            )
+            self.gamma = nn.Parameter(torch.zeros(1))
+        self.tail = nn.Sequential(
+            nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
+            nn.Tanh()
+        )
+
+    def forward(self, x, y):
+        x = self.head(x)
+        x = self.body(x)
+        if hasattr(self, 'attn'):
+            x = self.gamma * self.attn(x) + x
+        x = self.tail(x)
+        ind = int((y.shape[2] - x.shape[2]) / 2)
+        y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
+        return x + y
+        
 
 class DecoderAxionalLayer(nn.Module):
     """Implements a single layer of an unconditional ImageTransformer"""
