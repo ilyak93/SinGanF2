@@ -424,6 +424,123 @@ class AxialGeneratorConcatSkip2CleanAdd3(nn.Module):
         
 
 
+class AxialWDiscriminator3(nn.Module):
+    def __init__(self, opt):
+        super(AxialWDiscriminator3, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = int(opt.nfc)
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size, 1)
+        i = 0
+        N = int(opt.nfc / pow(2, (i + 1)))
+        block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+        self.body1 = block
+        i = 1
+        N = int(opt.nfc / pow(2, (i + 1)))
+        block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+        self.body2 = block
+        i=2
+        N = int(opt.nfc / pow(2, (i + 1)))
+        block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+        self.body3 = block
+        if opt.attn == True:
+            self.attn1 = AxialAttention(
+                dim=max(N, opt.min_nfc),  # embedding dimension
+                dim_index=1,  # where is the embedding dimension
+                # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
+                heads=4,  # number of heads for multi-head attention
+                num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
+                sum_axial_out=True
+                # whether to sum the contributions of attention on each axis, or to run the input through them sequentially. defaults to true
+            )
+            self.gamma1 = nn.Parameter(torch.zeros(1))
+            self.attn2 = AxialAttention(
+                dim=max(N, opt.min_nfc),  # embedding dimension
+                dim_index=1,  # where is the embedding dimension
+                # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
+                heads=4,  # number of heads for multi-head attention
+                num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
+                sum_axial_out=True
+                # whether to sum the contributions of attention on each axis, or to run the input through them sequentially. defaults to true
+            )
+            self.gamma2 = nn.Parameter(torch.zeros(1))
+        self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
+
+    def forward(self, x):
+        x = self.head(x)
+        x = self.body1(x)
+        x = self.body2(x)
+        if hasattr(self, 'attn'):
+            x = self.gamma2 * self.attn2(x) + x
+        x = self.body3(x)
+        if hasattr(self, 'attn'):
+            x = self.gamma1 * self.attn1(x) + x
+        x = self.tail(x)
+        return x
+
+
+class AxialGeneratorConcatSkip2CleanAdd4(nn.Module):
+    def __init__(self, opt):
+        super(AxialGeneratorConcatSkip2CleanAdd4, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = opt.nfc
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size,
+                              1)  # GenConvTransBlock(opt.nc_z,N,opt.ker_size,opt.padd_size,opt.stride)
+        self.body = nn.Sequential()
+        i = 0
+        N = int(opt.nfc / pow(2, (i + 1)))
+        block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+        self.body1 = block
+        i = 1
+        N = int(opt.nfc / pow(2, (i + 1)))
+        block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+        self.body2 = block
+        i=2
+        N = int(opt.nfc / pow(2, (i + 1)))
+        block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+        self.body3 = block
+        if opt.attn == True:
+            self.attn1 = self.attn = AxialAttention(
+                dim=max(N, opt.min_nfc),  # embedding dimension
+                dim_index=1,  # where is the embedding dimension
+                # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
+                heads=4,  # number of heads for multi-head attention
+                num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
+                sum_axial_out=True
+                # whether to sum the contributions of attention on each axis, or to run the input through them sequentially. defaults to true
+            )
+            self.gamma1 = nn.Parameter(torch.zeros(1))
+            self.attn2 = self.attn = AxialAttention(
+                dim=max(N, opt.min_nfc),  # embedding dimension
+                dim_index=1,  # where is the embedding dimension
+                # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
+                heads=4,  # number of heads for multi-head attention
+                num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
+                sum_axial_out=True
+                # whether to sum the contributions of attention on each axis, or to run the input through them sequentially. defaults to true
+            )
+            self.gamma2 = nn.Parameter(torch.zeros(1))
+        self.tail = nn.Sequential(
+            nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
+            nn.Tanh()
+        )
+
+    def forward(self, x, y):
+        x = self.head(x)
+        x = self.body1(x)
+        x = self.body2(x)
+        if hasattr(self, 'attn'):
+            x = self.gamma2 * self.attn2(x) + x
+        x = self.body3(x)
+        if hasattr(self, 'attn'):
+            x = self.gamma1 * self.attn1(x) + x
+        x = self.tail(x)
+        ind = int((y.shape[2] - x.shape[2]) / 2)
+        y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
+        return x + y
+        
+        
+
+
 def calculate_permutations(num_dimensions, emb_dim):
     total_dimensions = num_dimensions + 2
     emb_dim = emb_dim if emb_dim > 0 else (emb_dim + total_dimensions)
