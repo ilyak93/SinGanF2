@@ -773,10 +773,10 @@ class AxialDecLGeneratorConcatSkip2CleanAdd(nn.Module):
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
         return x + y
-		
-		
+        
+        
 
-		
+        
 class AxialDecLWDiscriminator2(nn.Module):
     def __init__(self, opt):
         super(AxialDecLWDiscriminator2, self).__init__()
@@ -800,7 +800,7 @@ class AxialDecLWDiscriminator2(nn.Module):
 
     def forward(self, x):
         x = self.head(x)
-		if hasattr(self, 'attn'):
+        if hasattr(self, 'attn'):
             x = self.attn(x.permute([0,2,3,1]).contiguous()).permute([0,3,1,2]).contiguous()
         x = self.body(x)
         x = self.tail(x)
@@ -834,15 +834,15 @@ class AxialDecLGeneratorConcatSkip2CleanAdd2(nn.Module):
 
     def forward(self, x, y):
         x = self.head(x)
-		if hasattr(self, 'attn'):
+        if hasattr(self, 'attn'):
             x = self.attn(x.permute([0,2,3,1]).contiguous()).permute([0,3,1,2]).contiguous()
         x = self.body(x)
         x = self.tail(x)
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
         return x + y
-		
-		
+        
+        
 
 
         
