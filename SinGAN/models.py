@@ -326,7 +326,7 @@ class AxialWDiscriminator3(nn.Module):
         block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
         self.body3 = block
         if opt.attn == True:
-            self.attn = AxialAttention(
+            self.attn1 = AxialAttention(
                 dim=max(N, opt.min_nfc),  # embedding dimension
                 dim_index=1,  # where is the embedding dimension
                 # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
@@ -335,16 +335,26 @@ class AxialWDiscriminator3(nn.Module):
                 sum_axial_out=True
                 # whether to sum the contributions of attention on each axis, or to run the input through them sequentially. defaults to true
             )
-            self.gamma = nn.Parameter(torch.zeros(1))
+            self.gamma1 = nn.Parameter(torch.zeros(1))
+            self.attn2 = AxialAttention(
+                dim=max(N, opt.min_nfc),  # embedding dimension
+                dim_index=1,  # where is the embedding dimension
+                # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
+                heads=4,  # number of heads for multi-head attention
+                num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
+                sum_axial_out=True
+                # whether to sum the contributions of attention on each axis, or to run the input through them sequentially. defaults to true
+            )
+            self.gamma2 = nn.Parameter(torch.zeros(1))
         self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
 
     def forward(self, x):
         x = self.head(x)
         if hasattr(self, 'attn'):
-            x = self.gamma * self.attn(x) + x
+            x = self.gamma1 * self.attn1(x) + x
         x = self.body1(x)
         if hasattr(self, 'attn'):
-            x = self.gamma * self.attn(x) + x
+            x = self.gamma2 * self.attn2(x) + x
         x = self.body2(x)
         x = self.body3(x)
         x = self.tail(x)
@@ -372,7 +382,7 @@ class AxialGeneratorConcatSkip2CleanAdd3(nn.Module):
         block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
         self.body3 = block
         if opt.attn == True:
-            self.attn = self.attn = AxialAttention(
+            self.attn1 = self.attn = AxialAttention(
                 dim=max(N, opt.min_nfc),  # embedding dimension
                 dim_index=1,  # where is the embedding dimension
                 # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
@@ -381,7 +391,17 @@ class AxialGeneratorConcatSkip2CleanAdd3(nn.Module):
                 sum_axial_out=True
                 # whether to sum the contributions of attention on each axis, or to run the input through them sequentially. defaults to true
             )
-            self.gamma = nn.Parameter(torch.zeros(1))
+            self.gamma1 = nn.Parameter(torch.zeros(1))
+            self.attn2 = self.attn = AxialAttention(
+                dim=max(N, opt.min_nfc),  # embedding dimension
+                dim_index=1,  # where is the embedding dimension
+                # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
+                heads=4,  # number of heads for multi-head attention
+                num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
+                sum_axial_out=True
+                # whether to sum the contributions of attention on each axis, or to run the input through them sequentially. defaults to true
+            )
+            self.gamma2 = nn.Parameter(torch.zeros(1))
         self.tail = nn.Sequential(
             nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
             nn.Tanh()
@@ -390,10 +410,10 @@ class AxialGeneratorConcatSkip2CleanAdd3(nn.Module):
     def forward(self, x, y):
         x = self.head(x)
         if hasattr(self, 'attn'):
-            x = self.gamma * self.attn(x) + x
+            x = self.gamma1 * self.attn1(x) + x
         x = self.body1(x)
         if hasattr(self, 'attn'):
-            x = self.gamma * self.attn(x) + x
+            x = self.gamma2 * self.attn2(x) + x
         x = self.body2(x)
         x = self.body3(x)
         x = self.tail(x)
