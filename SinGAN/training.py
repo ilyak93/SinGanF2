@@ -342,7 +342,7 @@ def train_paint(opt,Gs,Zs,reals,NoiseAmp,centers,paint_inject_scale):
 def init_models(opt):
 
     #generator initialization:
-    netG = models.AxialGeneratorConcatSkip2CleanAdd4(opt).to(opt.device)
+    netG = models.AxialDecLGeneratorConcatSkip2CleanAdd(opt).to(opt.device)
     netG.apply(models.weights_init)
     if opt.netG != '':
         netG.load_state_dict(torch.load(opt.netG))
@@ -353,7 +353,7 @@ def init_models(opt):
     
 
     #discriminator initialization:
-    netD = models.AxialWDiscriminator4(opt).to(opt.device)
+    netD = models.AxialDecLWDiscriminator(opt).to(opt.device)
     netD.apply(models.weights_init)
     if opt.netD != '':
         netD.load_state_dict(torch.load(opt.netD))
