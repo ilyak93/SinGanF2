@@ -235,7 +235,7 @@ class AxialGeneratorConcatSkip2CleanAdd(nn.Module):
 
 class AxialWDiscriminator2(nn.Module):
     def __init__(self, opt):
-        super(AxialWDiscriminator, self).__init__()
+        super(AxialWDiscriminator2, self).__init__()
         self.is_cuda = torch.cuda.is_available()
         N = int(opt.nfc)
         self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size, 1)
@@ -268,7 +268,7 @@ class AxialWDiscriminator2(nn.Module):
 
 class AxialGeneratorConcatSkip2CleanAdd2(nn.Module):
     def __init__(self, opt):
-        super(AxialGeneratorConcatSkip2CleanAdd, self).__init__()
+        super(AxialGeneratorConcatSkip2CleanAdd2, self).__init__()
         self.is_cuda = torch.cuda.is_available()
         N = opt.nfc
         self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size,
