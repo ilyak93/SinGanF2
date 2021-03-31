@@ -842,9 +842,90 @@ class AxialDecLGeneratorConcatSkip2CleanAdd2(nn.Module):
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
         return x + y
         
+
+
+class DecoderFFAxionalLayer(nn.Module):
+    """Implements a single layer of an unconditional ImageTransformer"""
+    def __init__(self, dim, dim_index, heads, num_dimensions, sum_axial_out):
+        super().__init__()
+    
+        self.layernorm_ffn = nn.LayerNorm([dim], eps=1e-6, elementwise_affine=True)
+        self.ffn = nn.Sequential(nn.Linear(dim, 2*dim, bias=True),
+                                 nn.ReLU(),
+                                 nn.Linear(2*dim, dim, bias=True))
+
+    # Takes care of the "postprocessing" from tensorflow code with the layernorm and dropout
+    def forward(self, X):
+      
+        y = self.ffn(X)
+        X = self.layernorm_ffn(y + X)
+        return X
         
 
+class AxialDecLWDiscriminator3(nn.Module):
+    def __init__(self, opt):
+        super(AxialDecLWDiscriminator3, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = int(opt.nfc)
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size, 1)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+        if opt.attn == True:
+            self.attn = DecoderFFAxionalLayer(
+                dim=max(N, opt.min_nfc),  # embedding dimension
+                dim_index=3,  # where is the embedding dimension
+                # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
+                heads=4,  # number of heads for multi-head attention
+                num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
+                sum_axial_out=True)
+        self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
 
+    def forward(self, x):
+        x = self.head(x)
+        x = self.body(x)
+        if hasattr(self, 'attn'):
+            x = self.attn(x.permute([0,2,3,1]).contiguous()).permute([0,3,1,2]).contiguous()
+        x = self.tail(x)
+        return x
+
+
+class AxialDecLGeneratorConcatSkip2CleanAdd3(nn.Module):
+    def __init__(self, opt):
+        super(AxialDecLGeneratorConcatSkip2CleanAdd3, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = opt.nfc
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size,
+                              1)  # GenConvTransBlock(opt.nc_z,N,opt.ker_size,opt.padd_size,opt.stride)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+        if opt.attn == True:
+            self.attn = DecoderFFAxionalLayer(
+                dim=max(N, opt.min_nfc),  # embedding dimension
+                dim_index=3,  # where is the embedding dimension
+                # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
+                heads=4,  # number of heads for multi-head attention
+                num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
+                sum_axial_out=True)
+        self.tail = nn.Sequential(
+            nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
+            nn.Tanh()
+        )
+
+    def forward(self, x, y):
+        x = self.head(x)
+        x = self.body(x)
+        if hasattr(self, 'attn'):
+            x = self.attn(x.permute([0,2,3,1]).contiguous()).permute([0,3,1,2]).contiguous()
+        x = self.tail(x)
+        ind = int((y.shape[2] - x.shape[2]) / 2)
+        y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
+        return x + y
         
         
 
