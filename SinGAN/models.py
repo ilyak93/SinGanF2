@@ -1025,7 +1025,7 @@ class ImgAttnWDiscriminator(nn.Module):
         x = self.head(x)
         x = self.body(x)
         if hasattr(self, 'attn'):
-            x = self.gamma * self.attn(x.permute([0,2,3,1]).contiguous()).permute([0,3,1,2]).contiguous() + x
+            x = self.gamma * self.attn(x)..permute([0, 3, 1, 2]) + x
         x = self.tail(x)
         return x
 
@@ -1054,7 +1054,7 @@ class ImgAttnGeneratorConcatSkip2CleanAdd(nn.Module):
         x = self.head(x)
         x = self.body(x)
         if hasattr(self, 'attn'):
-            x = self.gamma * self.attn(x.permute([0,2,3,1]).contiguous()).permute([0,3,1,2]).contiguous() + x
+            x = self.gamma * self.attn(x).permute([0, 3, 1, 2]) + x
         x = self.tail(x)
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
