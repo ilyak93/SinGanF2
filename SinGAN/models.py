@@ -1025,7 +1025,7 @@ class ImgAttnWDiscriminator(nn.Module):
         x = self.head(x)
         x = self.body(x)
         if hasattr(self, 'attn'):
-            x = self.gamma * self.attn(x)..permute([0, 3, 1, 2]) + x
+            x = self.gamma * self.attn(x).permute([0, 3, 1, 2]) + x
         x = self.tail(x)
         return x
 
