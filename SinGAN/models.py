@@ -1841,7 +1841,7 @@ class SegAxialDecLWDiscriminator(nn.Module):
                     # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
                     heads=1,  # number of heads for multi-head attention
                     num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
-                    sum_axial_out=True)
+                    sum_axial_out=True).to(head.device)
                 )
         self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
 
@@ -1909,7 +1909,7 @@ class SegAxialDecLGeneratorConcatSkip2CleanAdd(nn.Module):
                         # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
                         heads=1,  # number of heads for multi-head attention
                         num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
-                        sum_axial_out=True)
+                        sum_axial_out=True).to(head.device)
                 )
         self.tail = nn.Sequential(
             nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
