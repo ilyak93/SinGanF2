@@ -1617,11 +1617,11 @@ class SegAxialDecLGeneratorConcatSkip2CleanAdd(nn.Module):
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
         return x + y
-		
-		
-		
+        
+        
+        
 
-		
+        
 
 class ImageAttnGeneratorConcatSkip2CleanAdd(nn.Module):
     def __init__(self, opt):
@@ -1685,7 +1685,7 @@ class LinearAttnWDiscriminator(nn.Module):
 
     def forward(self, x):
         x = self.head(x)
-		if hasattr(self, 'attn'):
+        if hasattr(self, 'attn'):
             x = self.gamma * self.attn(x) + x
         x = self.body(x)
         x = self.tail(x)
@@ -1718,7 +1718,7 @@ class LinearAttnGeneratorConcatSkip2CleanAdd(nn.Module):
 
     def forward(self, x, y):
         x = self.head(x)
-		if hasattr(self, 'attn'):
+        if hasattr(self, 'attn'):
             x = self.gamma * self.attn(x) + x
         x = self.body(x)
         x = self.tail(x)
