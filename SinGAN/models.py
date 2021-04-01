@@ -116,12 +116,14 @@ class WDiscriminatorFSA(nn.Module):
         if opt.attn == True:
             self.attn = FullSelfAttn( max(N, opt.min_nfc))
         self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
+        self.gamma = nn.Parameter(torch.zeros(1))
 
     def forward(self, x):
         x = self.head(x)
         x = self.body(x)
         if hasattr(self,'attn'):
-            x,_ = self.attn(x)
+            x_hat,_ = self.attn(x)
+            x = self.gamma * x_hat + x
         x = self.tail(x)
         return x
         
@@ -145,12 +147,14 @@ class GeneratorConcatSkip2CleanAddFSA(nn.Module):
             nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
             nn.Tanh()
         )
+        self.gamma = nn.Parameter(torch.zeros(1))
 
     def forward(self, x, y):
         x = self.head(x)
         x = self.body(x)
         if hasattr(self,'attn'):
-            x,_ = self.attn(x)
+            x_hat,_ = self.attn(x)
+            x = self.gamma * x_hat + x
         x = self.tail(x)
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
