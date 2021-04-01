@@ -1032,7 +1032,7 @@ class ImgAttnWDiscriminator(nn.Module):
 
 class ImgAttnGeneratorConcatSkip2CleanAdd(nn.Module):
     def __init__(self, opt):
-        super(AxialGeneratorConcatSkip2CleanAdd, self).__init__()
+        super(ImgAttnGeneratorConcatSkip2CleanAdd, self).__init__()
         self.is_cuda = torch.cuda.is_available()
         N = opt.nfc
         self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size,
