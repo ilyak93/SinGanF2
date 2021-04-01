@@ -1867,7 +1867,7 @@ class SegAxialDecLWDiscriminator(nn.Module):
 
             x = to_patches(x)
             x = x.transpose(0, 1).view(-1, c, self.patch_size[0], self.patch_size[1])
-            y = torch.zeros_like(x)
+            y = torch.zeros_like(x, device=x.device)
             for i in range(self.patches):
                 inp = x[i, :, :, :].unsqueeze(0)
                 y[i, :, :, :] = self.attn[i](inp.permute([0, 2, 3, 1]).contiguous()).permute([0, 3, 1, 2]).contiguous()
@@ -1938,7 +1938,7 @@ class SegAxialDecLGeneratorConcatSkip2CleanAdd(nn.Module):
 
             x = to_patches(x)
             x = x.transpose(0, 1).view(-1, c, self.patch_size[0], self.patch_size[1])
-            y_hat = torch.zeros_like(x)
+            y_hat = torch.zeros_like(x, device=x.device)
             for i in range(self.patches):
                 inp = x[i, :, :, :].unsqueeze(0)
                 y_hat[i, :, :, :] = self.attn[i](inp.permute([0, 2, 3, 1]).contiguous()).permute([0, 3, 1, 2]).contiguous()
