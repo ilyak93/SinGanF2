@@ -1810,3 +1810,145 @@ class LinearDecGeneratorConcatSkip2CleanAdd(nn.Module):
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
         return x + y
+        
+        
+        
+
+class SegAxialDecLWDiscriminator(nn.Module):
+    def __init__(self, opt, patch_size=[6, 6]):
+        super(SegAxialDecLWDiscriminator, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        self.patch_size = patch_size
+        N = int(opt.nfc)
+        self.h, self.w = opt.real_image_size
+        self.h, self.w = self.h - 8, self.w - 8
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size, 1)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+        if opt.attn == True:
+            self.attn = []
+            btm_pad = - self.h % self.patch_size[0]
+            rht_pad = - self.w % self.patch_size[1]
+            self.patches = (self.h + btm_pad) * (self.w + rht_pad) // (patch_size[0] * patch_size[1])
+            for i in range(self.patches):
+                self.attn.append(
+                    DecoderAxionalLayer(
+                    dim=max(N, opt.min_nfc),  # embedding dimension
+                    dim_index=3,  # where is the embedding dimension
+                    # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
+                    heads=1,  # number of heads for multi-head attention
+                    num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
+                    sum_axial_out=True)
+                )
+        self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
+
+
+    def forward(self, x):
+        x = self.head(x)
+        x = self.body(x)
+        shape = x.shape
+        if hasattr(self, 'attn'):
+            h, w = self.h, self.w
+            btm_pad = - h % self.patch_size[0]
+            rht_pad = - w % self.patch_size[1]
+            pad_input = nn.ZeroPad2d((0, rht_pad, 0, btm_pad))
+
+            x = pad_input(x)
+
+            _, c, fh, fw = x.shape
+            to_patches = Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)',
+                                   p1=self.patch_size[0], p2=self.patch_size[1], c=c)
+
+            h = fh // self.patch_size[0]
+            w = fw // self.patch_size[1]
+
+            x = to_patches(x)
+            x = x.transpose(0, 1).view(-1, c, self.patch_size[0], self.patch_size[1])
+            y = torch.zeros_like(x)
+            for i in range(self.patches):
+                inp = x[i, :, :, :].unsqueeze(0)
+                y[i, :, :, :] = self.attn[i](inp.permute([0, 2, 3, 1]).contiguous()).permute([0, 3, 1, 2]).contiguous()
+            y = y.view(1, x.shape[0], -1)
+            from_patches = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)',
+                                     h=h, w=w, p1=self.patch_size[0], p2=self.patch_size[1], c=c)
+            y = from_patches(y)
+        x = y[:shape[0], :shape[1], :shape[2], :shape[3]]
+        x = self.tail(x)
+        return x
+
+
+class SegAxialDecLGeneratorConcatSkip2CleanAdd(nn.Module):
+    def __init__(self, opt, patch_size=[6, 6]):
+        super(SegAxialDecLGeneratorConcatSkip2CleanAdd, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        self.patch_size = patch_size
+        N = opt.nfc
+        self.h, self.w = opt.fake_image_size
+        self.h, self.w = self.h - 8, self.w - 8
+
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size,
+                              1)  # GenConvTransBlock(opt.nc_z,N,opt.ker_size,opt.padd_size,opt.stride)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+        if opt.attn == True:
+            self.attn = []
+            btm_pad = - self.h % self.patch_size[0]
+            rht_pad = - self.w % self.patch_size[1]
+            self.patches = (self.h + btm_pad) * (self.w + rht_pad) // (patch_size[0] * patch_size[1])
+            for i in range(self.patches):
+                self.attn.append(
+                    DecoderAxionalLayer(
+                        dim=max(N, opt.min_nfc),  # embedding dimension
+                        dim_index=3,  # where is the embedding dimension
+                        # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
+                        heads=1,  # number of heads for multi-head attention
+                        num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
+                        sum_axial_out=True)
+                )
+        self.tail = nn.Sequential(
+            nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
+            nn.Tanh()
+        )
+
+
+
+    def forward(self, x, y):
+        x = self.head(x)
+        x = self.body(x)
+        shape = x.shape
+        if hasattr(self, 'attn'):
+            btm_pad = - self.h % self.patch_size[0]
+            rht_pad = - self.w % self.patch_size[1]
+            pad_input = nn.ZeroPad2d((0, rht_pad, 0, btm_pad))
+
+            x = pad_input(x)
+
+            _, c, fh, fw = x.shape
+            to_patches = Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)',
+                                   p1=self.patch_size[0], p2=self.patch_size[1], c=c)
+
+            h = fh // self.patch_size[0]
+            w = fw // self.patch_size[1]
+
+            x = to_patches(x)
+            x = x.transpose(0, 1).view(-1, c, self.patch_size[0], self.patch_size[1])
+            y_hat = torch.zeros_like(x)
+            for i in range(self.patches):
+                inp = x[i, :, :, :].unsqueeze(0)
+                y_hat[i, :, :, :] = self.attn[i](inp.permute([0, 2, 3, 1]).contiguous()).permute([0, 3, 1, 2]).contiguous()
+            y_hat = y_hat.view(1, x.shape[0], -1)
+
+            from_patches = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)',
+                                     h=h, w=w, p1=self.patch_size[0], p2=self.patch_size[1], c=c)
+            y_hat = from_patches(y_hat)
+        x = y_hat[:shape[0], :shape[1], :shape[2], :shape[3]]
+        x = self.tail(x)
+        ind = int((y.shape[2] - x.shape[2]) / 2)
+        y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
+        return x + y
