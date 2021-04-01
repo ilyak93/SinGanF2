@@ -1617,3 +1617,196 @@ class SegAxialDecLGeneratorConcatSkip2CleanAdd(nn.Module):
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
         return x + y
+		
+		
+		
+
+		
+
+class ImageAttnGeneratorConcatSkip2CleanAdd(nn.Module):
+    def __init__(self, opt):
+        super(ImageAttnGeneratorConcatSkip2CleanAdd, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = opt.nfc
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size,
+                              1)  # GenConvTransBlock(opt.nc_z,N,opt.ker_size,opt.padd_size,opt.stride)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+
+        self.tail = nn.Sequential(
+            nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
+            nn.Tanh()
+        )
+        if opt.attn == True:
+            self.attn = ImageAttn(
+                in_dim=max(N, opt.min_nfc),
+                num_heads=4,
+                block_length=max(N, opt.min_nfc),
+            )
+            self.gamma = nn.Parameter(torch.zeros(1))
+
+    def forward(self, x, y):
+        x = self.head(x)
+        x = self.body(x)
+        if hasattr(self, 'attn'):
+            x = self.gamma * x + self.attn(x).permute([0, 3, 1, 2])
+        x = self.tail(x)
+        ind = int((y.shape[2] - x.shape[2]) / 2)
+        y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
+        return x + y
+        
+        
+
+from linear_attention_transformer.images import ImageLinearAttention
+
+
+
+class LinearAttnWDiscriminator(nn.Module):
+    def __init__(self, opt):
+        super(LinearAttnWDiscriminator, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = int(opt.nfc)
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size, 1)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+        self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
+        if opt.attn == True:
+            self.attn =ImageLinearAttention(
+                        chan = max(N, opt.min_nfc), heads = 4,
+                        key_dim = 64       # can be decreased to 32 for more memory savings
+                        )
+            self.gamma = nn.Parameter(torch.zeros(1))
+
+    def forward(self, x):
+        x = self.head(x)
+		if hasattr(self, 'attn'):
+            x = self.gamma * self.attn(x) + x
+        x = self.body(x)
+        x = self.tail(x)
+        return x
+
+
+class LinearAttnGeneratorConcatSkip2CleanAdd(nn.Module):
+    def __init__(self, opt):
+        super(LinearAttnGeneratorConcatSkip2CleanAdd, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = opt.nfc
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size,
+                              1)  # GenConvTransBlock(opt.nc_z,N,opt.ker_size,opt.padd_size,opt.stride)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+
+        self.tail = nn.Sequential(
+            nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
+            nn.Tanh()
+        )
+        if opt.attn == True:
+            self.attn = ImageLinearAttention(
+                chan=max(N, opt.min_nfc), heads=4,
+                key_dim=64  # can be decreased to 32 for more memory savings
+            )
+            self.gamma = nn.Parameter(torch.zeros(1))
+
+    def forward(self, x, y):
+        x = self.head(x)
+		if hasattr(self, 'attn'):
+            x = self.gamma * self.attn(x) + x
+        x = self.body(x)
+        x = self.tail(x)
+        ind = int((y.shape[2] - x.shape[2]) / 2)
+        y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
+        return x + y
+
+        
+class DecoderLinearAttnLayer(nn.Module):
+    """Implements a single layer of an unconditional ImageTransformer"""
+
+    def __init__(self, chan, heads, key_dim=64):
+        super().__init__()
+        self.attn = ImageLinearAttention(
+            chan=chan, heads=heads,
+            key_dim=key_dim  # can be decreased to 32 for more memory savings
+        )
+        self.layernorm_attn = nn.LayerNorm([chan], eps=1e-6, elementwise_affine=True)
+        self.layernorm_ffn = nn.LayerNorm([chan], eps=1e-6, elementwise_affine=True)
+        self.ffn = nn.Sequential(nn.Linear(chan, 2 * chan, bias=True),
+                                 nn.ReLU(),
+                                 nn.Linear(2 * chan, chan, bias=True))
+
+    # Takes care of the "postprocessing" from tensorflow code with the layernorm and dropout
+    def forward(self, X):
+        y = self.attn(X)
+        X = self.layernorm_attn((y + X).permute([0,2,3,1]).contiguous())
+        y = self.ffn(X)
+        X = self.layernorm_attn(y + X).permute([0,3,1,2]).contiguous()
+        return X
+
+
+class LinearDecWDiscriminator(nn.Module):
+    def __init__(self, opt):
+        super(LinearDecWDiscriminator, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = int(opt.nfc)
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size, 1)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+        self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
+        if opt.attn == True:
+            self.attn = DecoderLinearAttnLayer(
+                chan=max(N, opt.min_nfc), heads=4,
+                key_dim=64  # can be decreased to 32 for more memory savings
+            )
+
+    def forward(self, x):
+        x = self.head(x)
+        x = self.body(x)
+        if hasattr(self, 'attn'):
+            x = self.attn(x)
+        x = self.tail(x)
+        return x
+
+
+class LinearDecGeneratorConcatSkip2CleanAdd(nn.Module):
+    def __init__(self, opt):
+        super(LinearDecGeneratorConcatSkip2CleanAdd, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = opt.nfc
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size,
+                              1)  # GenConvTransBlock(opt.nc_z,N,opt.ker_size,opt.padd_size,opt.stride)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+
+        self.tail = nn.Sequential(
+            nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
+            nn.Tanh()
+        )
+        if opt.attn == True:
+            self.attn = DecoderLinearAttnLayer(
+                chan=max(N, opt.min_nfc), heads=4,
+                key_dim=64  # can be decreased to 32 for more memory savings
+            )
+
+    def forward(self, x, y):
+        x = self.head(x)
+        x = self.body(x)
+        if hasattr(self, 'attn'):
+            x = self.attn(x)
+        x = self.tail(x)
+        ind = int((y.shape[2] - x.shape[2]) / 2)
+        y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
+        return x + y
