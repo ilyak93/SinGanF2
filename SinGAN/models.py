@@ -1004,6 +1004,64 @@ class ImageAttn(nn.Module):
         return result
         
         
+
+class ImgAttnWDiscriminator(nn.Module):
+    def __init__(self, opt):
+        super(ImgAttnWDiscriminator, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = int(opt.nfc)
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size, 1)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+        if opt.attn == True:
+            self.attn = ImageAttn(in_dim=max(N, opt.min_nfc), num_heads=4, block_length=max(N, opt.min_nfc))
+            self.gamma = nn.Parameter(torch.zeros(1))
+        self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
+
+    def forward(self, x):
+        x = self.head(x)
+        x = self.body(x)
+        if hasattr(self, 'attn'):
+            x = self.gamma * self.attn(x) + x
+        x = self.tail(x)
+        return x
+
+
+class ImgAttnGeneratorConcatSkip2CleanAdd(nn.Module):
+    def __init__(self, opt):
+        super(AxialGeneratorConcatSkip2CleanAdd, self).__init__()
+        self.is_cuda = torch.cuda.is_available()
+        N = opt.nfc
+        self.head = ConvBlock(opt.nc_im, N, opt.ker_size, opt.padd_size,
+                              1)  # GenConvTransBlock(opt.nc_z,N,opt.ker_size,opt.padd_size,opt.stride)
+        self.body = nn.Sequential()
+        for i in range(opt.num_layer - 2):
+            N = int(opt.nfc / pow(2, (i + 1)))
+            block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
+            self.body.add_module('block%d' % (i + 1), block)
+        if opt.attn == True:
+            self.attn = ImageAttn(in_dim=max(N, opt.min_nfc), num_heads=4, block_length=max(N, opt.min_nfc))
+            self.gamma = nn.Parameter(torch.zeros(1))
+        self.tail = nn.Sequential(
+            nn.Conv2d(max(N, opt.min_nfc), opt.nc_im, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size),
+            nn.Tanh()
+        )
+
+    def forward(self, x, y):
+        x = self.head(x)
+        x = self.body(x)
+        if hasattr(self, 'attn'):
+            x = self.gamma * self.attn(x) + x
+        x = self.tail(x)
+        ind = int((y.shape[2] - x.shape[2]) / 2)
+        y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
+        return x + y
+        
+        
+        
 class DecoderAttnLayer(nn.Module):
     """Implements a single layer of an unconditional ImageTransformer"""
     def __init__(self, in_dim, num_heads, block_length, dropout=0.1):
