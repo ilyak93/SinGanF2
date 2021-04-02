@@ -605,7 +605,7 @@ class AxialGeneratorConcatSkip2CleanAdd5(nn.Module):
         self.body3 = block
         if opt.attn == True:
             self.attn = AxialAttention(
-                dim=max(N, opt.min_nfc),  # embedding dimension
+                dim=3,  # embedding dimension
                 dim_index=1,  # where is the embedding dimension
                 # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
                 heads=4,  # number of heads for multi-head attention
