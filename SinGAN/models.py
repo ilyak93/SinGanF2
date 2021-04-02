@@ -116,7 +116,7 @@ class WDiscriminatorFSA(nn.Module):
         if opt.attn == True:
             self.attn = FullSelfAttn( max(N, opt.min_nfc))
         self.tail = nn.Conv2d(max(N, opt.min_nfc), 1, kernel_size=opt.ker_size, stride=1, padding=opt.padd_size)
-		
+        
 
     def forward(self, x):
         x = self.head(x)
@@ -538,8 +538,8 @@ class AxialGeneratorConcatSkip2CleanAdd4(nn.Module):
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
         return x + y
-		
-		
+        
+        
 
 class AxialWDiscriminator5(nn.Module):
     def __init__(self, opt):
@@ -626,7 +626,7 @@ class AxialGeneratorConcatSkip2CleanAdd5(nn.Module):
         x = self.body2(x)
         x = self.body3(x)
         x = self.tail(x)
-		if hasattr(self, 'attn'):
+        if hasattr(self, 'attn'):
            x = self.gamma1 * self.attn1(x) + x
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]

@@ -259,15 +259,14 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
         if oom == True:
             alloc = torch.cuda.memory_allocated()
             print(alloc)
-            functions.im_save('fake_sample', opt.outf, fake.detach(), vmin=0, vmax=1)
-            #plt.imsave('%s/fake_sample.png' % (opt.outf), functions.convert_image_np(fake.detach()), vmin=0, vmax=1)
+            plt.imsave('%s/fake_sample.png' % (opt.outf), functions.convert_image_np(fake.detach()), vmin=0, vmax=1)
+            plt.imsave('%s/G(z_opt).png'    % (opt.outf),  functions.convert_image_np(netG(Z_opt.detach(), z_prev).detach()), vmin=0, vmax=1)
             if opt.mode == 'train_gif_rnn':
                 g_states = netG.init_hidden(real_batch_sz)
                 G_opt, _ = netG(Z_opt.detach(), z_prev, g_states)
             else:
                 G_opt = netG(Z_opt.detach(), z_prev)
             G_opt = G_opt.detach()
-            functions.im_save('G(z_opt)', opt.outf, G_opt, vmin=0, vmax=1)
             #plt.imsave('%s/G(z_opt).png' % (opt.outf),
             #           functions.convert_image_np(netG(Z_opt.detach(), z_prev, g_states).detach()), vmin=0, vmax=1)
             # plt.imsave('%s/D_fake.png'   % (opt.outf), functions.convert_image_np(D_fake_map))
