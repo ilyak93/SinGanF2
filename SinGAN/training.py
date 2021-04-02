@@ -107,9 +107,8 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
     D_fake2plot = []
     z_opt2plot = []
     errG2recplot = []
-
+    oom = False
     for epoch in range(opt.niter):
-        oom = False
         try:
             if (Gs == []) & (opt.mode != 'SR_train'):
                 z_opt = functions.generate_noise([1,opt.nzx,opt.nzy], device=opt.device)
@@ -253,9 +252,8 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
             schedulerD.step()
             schedulerG.step()
         except:
-            print('here')
             oom = True
-        print(oom)    
+           
         if oom == True:
             alloc = torch.cuda.memory_allocated()
             print(alloc)
