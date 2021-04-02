@@ -254,10 +254,23 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
             raise NameError('HiThere')
         except:
             oom = True
-         
+          
         if oom == True:
             alloc = torch.cuda.memory_allocated()
             print(alloc)
+            plt.imsave('%s/fake_sample.png' % (opt.outf), functions.convert_image_np(fake.detach()), vmin=0, vmax=1)
+            
+            G_opt = netG(Z_opt.detach(), z_prev)
+            G_opt = G_opt.detach()
+            plt.imsave('%s/G(z_opt).png'    % (opt.outf),  functions.convert_image_np(netG(Z_opt.detach(), z_prev).detach()), vmin=0, vmax=1)
+            #plt.imsave('%s/G(z_opt).png' % (opt.outf),
+            #           functions.convert_image_np(netG(Z_opt.detach(), z_prev, g_states).detach()), vmin=0, vmax=1)
+            # plt.imsave('%s/D_fake.png'   % (opt.outf), functions.convert_image_np(D_fake_map))
+            # plt.imsave('%s/D_real.png'   % (opt.outf), functions.convert_image_np(D_real_map))
+            # plt.imsave('%s/z_opt.png'    % (opt.outf), functions.convert_image_np(z_opt.detach()), vmin=0, vmax=1)
+            # plt.imsave('%s/prev.png'     %  (opt.outf), functions.convert_image_np(prev), vmin=0, vmax=1)
+            # plt.imsave('%s/noise.png'    %  (opt.outf), functions.convert_image_np(noise), vmin=0, vmax=1)
+            # plt.imsave('%s/z_prev.png'   % (opt.outf), functions.convert_image_np(z_prev), vmin=0, vmax=1)
 
             torch.save(z_opt, '%s/z_opt.pth' % (opt.outf))
 
