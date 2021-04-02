@@ -110,6 +110,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
     oom = False
     for epoch in range(opt.niter):
         try:
+			raise NameError('HiThere')
             if (Gs == []) & (opt.mode != 'SR_train'):
                 z_opt = functions.generate_noise([1,opt.nzx,opt.nzy], device=opt.device)
                 z_opt = m_noise(z_opt.expand(1,3,opt.nzx,opt.nzy))
@@ -251,7 +252,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
 
             schedulerD.step()
             schedulerG.step()
-            raise NameError('HiThere')
+            
         except:
             oom = True
           
