@@ -627,7 +627,7 @@ class AxialGeneratorConcatSkip2CleanAdd5(nn.Module):
         x = self.body3(x)
         x = self.tail(x)
         if hasattr(self, 'attn'):
-           x = self.gamma1 * self.attn1(x) + x
+           x = self.gamma * self.attn(x) + x
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
         return x + y
