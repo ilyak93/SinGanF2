@@ -146,7 +146,6 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
                     z_prev = in_s
                     criterion = nn.MSELoss()
                     RMSE = torch.sqrt(criterion(real, z_prev))
-                    RMSEplot.append(RMSE)
                     opt.noise_amp = opt.noise_amp_init * RMSE
                     z_prev = m_image(z_prev)
                     prev = z_prev
