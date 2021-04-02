@@ -135,6 +135,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
 
             # train with fake
             if (j==0) & (epoch == 0):
+                print(len(Gs))
                 if (Gs == []) & (opt.mode != 'SR_train'):
                     prev = torch.full([1,opt.nc_z,opt.nzx,opt.nzy], 0, dtype=torch.float, device=opt.device)
                     in_s = prev
@@ -150,6 +151,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
                     z_prev = m_image(z_prev)
                     prev = z_prev
                 else:
+                    print('here')
                     prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rand',m_noise,m_image,opt)
                     prev = m_image(prev)
                     z_prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rec',m_noise,m_image,opt)
