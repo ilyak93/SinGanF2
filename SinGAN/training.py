@@ -379,7 +379,7 @@ def train_paint(opt,Gs,Zs,reals,NoiseAmp,centers,paint_inject_scale):
 def init_models(opt):
 
     #generator initialization:
-    netG = models.Generator(opt).to(opt.device)
+    netG = models.AxialGeneratorConcatSkip2CleanAdd5(opt).to(opt.device)
     netG.apply(models.weights_init)
     if opt.netG != '':
         netG.load_state_dict(torch.load(opt.netG))
