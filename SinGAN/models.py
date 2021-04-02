@@ -773,7 +773,7 @@ class AxialWDiscriminator7(nn.Module):
         if opt.attn == True:
             self.attn = DecoderAxionalLayer(
                 dim=max(N, opt.min_nfc),  # embedding dimension
-                dim_index=1,  # where is the embedding dimension
+                dim_index=3,  # where is the embedding dimension
                 # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
                 heads=4,  # number of heads for multi-head attention
                 num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
@@ -786,7 +786,7 @@ class AxialWDiscriminator7(nn.Module):
     def forward(self, x):
         x = self.head(x)
         if hasattr(self, 'attn'):
-            x = self.gamma * self.attn(x) + x
+            x = self.gamma * self.attn(x.permute([0,2,3,1]).contiguous()).permute([0,3,1,2]).contiguous() + x
         x = self.body1(x)
         x = self.body2(x)
         x = self.body3(x)
@@ -817,7 +817,7 @@ class AxialGeneratorConcatSkip2CleanAdd7(nn.Module):
         if opt.attn == True:
             self.attn = DecoderAxionalLayer(
                 dim=3,  # embedding dimension
-                dim_index=1,  # where is the embedding dimension
+                dim_index=3,  # where is the embedding dimension
                 # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
                 heads=3,  # number of heads for multi-head attention
                 num_dimensions=2,  # number of axial dimensions (images is 2, video is 3, or more)
@@ -838,7 +838,7 @@ class AxialGeneratorConcatSkip2CleanAdd7(nn.Module):
         x = self.body3(x)
         x = self.tail(x)
         if hasattr(self, 'attn'):
-           x = self.gamma * self.attn(x) + x
+           x = self.gamma * self.attn(x.permute([0,2,3,1]).contiguous()).permute([0,3,1,2]).contiguous() + x
         ind = int((y.shape[2] - x.shape[2]) / 2)
         y = y[:, :, ind:(y.shape[2] - ind), ind:(y.shape[3] - ind)]
         return x + y
