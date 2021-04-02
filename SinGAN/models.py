@@ -574,10 +574,10 @@ class AxialWDiscriminator5(nn.Module):
 
     def forward(self, x):
         x = self.head(x)
-        x = self.body1(x)
-        x = self.body2(x)
         if hasattr(self, 'attn'):
             x = self.gamma * self.attn(x) + x
+        x = self.body1(x)
+        x = self.body2(x)
         x = self.body3(x)
         x = self.tail(x)
         return x
