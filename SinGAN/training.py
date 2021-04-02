@@ -107,6 +107,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
     D_fake2plot = []
     z_opt2plot = []
     errG2recplot = []
+    RMSEplot = []
     oom = False
     for epoch in range(opt.niter):
         #try:
@@ -145,6 +146,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
                     z_prev = in_s
                     criterion = nn.MSELoss()
                     RMSE = torch.sqrt(criterion(real, z_prev))
+                    RMSEplot.append(RMSE)
                     opt.noise_amp = opt.noise_amp_init * RMSE
                     z_prev = m_image(z_prev)
                     prev = z_prev
@@ -154,6 +156,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
                     z_prev = draw_concat(Gs,Zs,reals,NoiseAmp,in_s,'rec',m_noise,m_image,opt)
                     criterion = nn.MSELoss()
                     RMSE = torch.sqrt(criterion(real, z_prev))
+                    RMSEplot.append(RMSE)
                     opt.noise_amp = opt.noise_amp_init*RMSE
                     z_prev = m_image(z_prev)
             else:
@@ -247,6 +250,9 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
             plt.show()
             print('Reconstruction loss:')
             plt.plot(list(range(0, len(errG2recplot))), errG2recplot)
+            plt.show()
+            print('RMSE loss:')
+            plt.plot(list(range(0, len(RMSEplot))), RMSEplot)
             plt.show()
 
         schedulerD.step()
