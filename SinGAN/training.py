@@ -253,7 +253,7 @@ def train_single_scale(netD,netG,reals,Gs,Zs,in_s,NoiseAmp,opt,centers=None):
             schedulerD.step()
             schedulerG.step()
         except:
-        print('here')
+			print('here')
             oom = True
         print(oom)    
         if oom == True:
