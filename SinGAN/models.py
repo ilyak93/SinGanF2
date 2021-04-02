@@ -604,7 +604,7 @@ class AxialGeneratorConcatSkip2CleanAdd5(nn.Module):
         block = ConvBlock(max(2 * N, opt.min_nfc), max(N, opt.min_nfc), opt.ker_size, opt.padd_size, 1)
         self.body3 = block
         if opt.attn == True:
-            self.attn = self.attn = AxialAttention(
+            self.attn = AxialAttention(
                 dim=max(N, opt.min_nfc),  # embedding dimension
                 dim_index=1,  # where is the embedding dimension
                 # dim_heads = 32,        # dimension of each head. defaults to dim // heads if not supplied
